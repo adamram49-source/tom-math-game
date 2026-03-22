@@ -696,9 +696,10 @@
             
             // Calculate Stars
             let starsEarned = 0;
-            if (correctInLevel === TOTAL_QUESTIONS) starsEarned = 3;
-            else if (correctInLevel >= 7) starsEarned = 2;
-            else if (correctInLevel >= 4) starsEarned = 1;
+            if (correctInLevel >= 9) starsEarned = 3;       // 0 או 1 טעויות (9 או 10 תשובות נכונות)
+            else if (correctInLevel >= 7) starsEarned = 2;  // 2 או 3 טעויות (7 או 8 תשובות נכונות)
+            else if (correctInLevel >= 5) starsEarned = 1;  // 4 או 5 טעויות (5 או 6 תשובות נכונות)
+            // כל מה שמתחת ל-5 תשובות נכונות (6 טעויות ומעלה) ישאיר את starsEarned על 0
 
             // Save Progress
             const previousStars = userProgress[currentLevelId] || 0;
