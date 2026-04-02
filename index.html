@@ -163,6 +163,13 @@
             border-color: #c084fc;
         }
 
+        /* סגנון כרטיסיית מפת חום במסך הראשי */
+        .heatmap-card {
+            grid-column: span 4;
+            background: linear-gradient(45deg, rgba(16, 185, 129, 0.2), rgba(59, 130, 246, 0.2));
+            border-color: #3b82f6;
+        }
+
         .alien-container {
             display: flex;
             align-items: center;
@@ -211,6 +218,7 @@
             margin-bottom: 20px;
             font-size: 1.5rem;
             font-weight: bold;
+            align-items: center;
         }
         .combo-meter { color: #fbbf24; }
         
@@ -330,6 +338,115 @@
         #particles {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 9999;
         }
+
+        /* -------- Heatmap & Practice specific CSS -------- */
+        #screen-heatmap {
+            justify-content: flex-start;
+        }
+
+        .heatmap-container {
+            width: 100%;
+            overflow-x: auto;
+            overflow-y: auto;
+            max-height: 55vh;
+            border-radius: 10px;
+            border: 2px solid rgba(255,255,255,0.1);
+            background: rgba(0,0,0,0.4);
+            margin-bottom: 20px;
+        }
+
+        .heatmap-table {
+            border-collapse: collapse;
+            width: max-content;
+            margin: 0 auto;
+        }
+
+        .heatmap-table th, .heatmap-table td {
+            border: 1px solid rgba(255,255,255,0.2);
+            padding: 5px;
+        }
+
+        .heatmap-table th {
+            background: rgba(15, 23, 42, 0.9);
+            color: #fbbf24;
+            font-size: 1.2rem;
+            position: sticky;
+            top: 0;
+            z-index: 2;
+        }
+        
+        .heatmap-table th:first-child {
+            left: 0;
+            z-index: 3;
+        }
+
+        .hm-cell {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: space-between;
+            min-width: 75px;
+            height: 60px;
+            padding: 2px;
+        }
+
+        .hm-ans {
+            font-size: 1.4rem;
+            font-weight: bold;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
+        }
+
+        .hm-stats {
+            display: flex;
+            width: 100%;
+            justify-content: space-between;
+            font-size: 0.75rem;
+            font-weight: bold;
+            color: #fff;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
+            direction: rtl; /* מבטיח שסה"כ בימין, ❌ באמצע, ✅ בשמאל */
+        }
+
+        .practice-setup {
+            background: rgba(0,0,0,0.5);
+            padding: 20px;
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            flex-wrap: wrap;
+            justify-content: center;
+            border: 2px solid var(--accent);
+        }
+
+        .practice-inputs input {
+            width: 70px;
+            font-size: 1.5rem;
+            padding: 5px;
+            text-align: center;
+            border-radius: 10px;
+            border: 2px solid #a5b4fc;
+            background: rgba(255,255,255,0.9);
+            font-weight: bold;
+            margin: 0 5px;
+        }
+        
+        .btn-exit-prac {
+            background: var(--danger);
+            font-size: 1.2rem;
+            padding: 8px 15px;
+            border-radius: 10px;
+            border: none;
+            color: white;
+            cursor: pointer;
+            box-shadow: 0 4px 0 #991b1b;
+            font-weight: bold;
+            margin: 0;
+            transition: 0.2s;
+        }
+        .btn-exit-prac:hover { filter: brightness(1.1); transform: translateY(-2px); }
+        .btn-exit-prac:active { transform: translateY(2px); box-shadow: 0 2px 0 #991b1b; }
+
     </style>
 </head>
 <body>
@@ -355,6 +472,25 @@
         <button class="btn" onclick="showScreen('screen-welcome')" style="margin-top: 20px;">חזור למסך הראשי</button>
     </div>
 
+    <!-- מסך מפת חום -->
+    <div id="screen-heatmap" class="screen">
+        <h2 style="margin-bottom: 10px;">מפת חום - ניתוח נתונים</h2>
+        <div class="heatmap-container">
+            <table class="heatmap-table" id="heatmap-table">
+                <!-- ייבנה אוטומטית דרך JS -->
+            </table>
+        </div>
+        
+        <div class="practice-setup">
+            <h3 style="margin: 0; color: #fbbf24;">אימון ממוקד:</h3>
+            <div class="practice-inputs">
+                <label>בין <input type="number" id="prac-min" min="0" max="100" value="50">% לבין <input type="number" id="prac-max" min="0" max="100" value="100">% טעויות</label>
+            </div>
+            <button class="btn success" style="margin: 0; padding: 10px 25px;" onclick="startPractice()">התחל תרגול 🎯</button>
+        </div>
+        <button class="btn" style="margin-top: 15px;" onclick="showScreen('screen-map')">חזור למפה</button>
+    </div>
+
     <div id="screen-tip" class="screen">
         <h2 id="tip-title">חוק חלל: כפולות של X</h2>
         <div class="alien-container">
@@ -369,7 +505,15 @@
         <div class="game-header">
             <div>ניקוד: <span id="ui-score" style="color:#10b981;">0</span></div>
             <div class="combo-meter">🔥 רצף: <span id="ui-combo">0</span></div>
-            <div>שאלה <span id="ui-question-num">1</span>/10</div>
+            
+            <!-- מעקב רגיל -->
+            <div id="tracker-normal">שאלה <span id="ui-question-num">1</span>/10</div>
+            
+            <!-- מעקב אימון חכם (מוסתר כברירת מחדל) -->
+            <div id="tracker-practice" style="display: none; align-items: center; gap: 15px;">
+                <span style="color:#a5b4fc;">תרגול (שאלה <span id="ui-prac-num">1</span>)</span>
+                <button class="btn-exit-prac" onclick="endPractice()">יציאה מתרגול</button>
+            </div>
         </div>
         <div class="progress-container">
             <div class="progress-bar" id="ui-progress"></div>
@@ -391,7 +535,7 @@
         </div>
         <div style="margin-top: 30px;">
             <button class="btn accent" onclick="showScreen('screen-map')">המשך במסע 🗺️</button>
-            <button class="btn" onclick="startLevel(currentLevelId)">שחק שוב 🔄</button>
+            <button class="btn" onclick="handlePlayAgain()">שחק שוב 🔄</button>
         </div>
     </div>
 
@@ -417,10 +561,21 @@
         let questionCount = 0;
         const TOTAL_QUESTIONS = 10;
         let currentCorrectAnswer = 0;
+        
+        // משתנים לשמירת נתוני התרגיל הנוכחי כדי להזין למפת החום
+        let currentN1 = 0;
+        let currentN2 = 0;
+
         let score = 0;
         let combo = 0;
         let correctInLevel = 0;
         let isProcessing = false;
+
+        // מצב אימון ומפת חום
+        let isPracticeMode = false;
+        let practiceCorrect = 0;
+        let practiceTotal = 0;
+        let heatmapData = JSON.parse(localStorage.getItem('spaceHeatmapData')) || {};
 
         let userProgress = JSON.parse(localStorage.getItem('spaceMultiplicationProgress')) || {};
 
@@ -508,6 +663,17 @@
                 `;
                 container.appendChild(card);
             });
+
+            // הוספת כרטיסיית מפת החום אחרי מבחן הבוס
+            const hmCard = document.createElement('div');
+            hmCard.className = `planet-card heatmap-card`;
+            hmCard.onclick = () => { playSound('click'); showHeatmap(); };
+            hmCard.innerHTML = `
+                <span class="planet-icon">📊</span>
+                <div class="planet-title">מפת חום ואימון ממוקד</div>
+                <div class="stars-display" style="color: #a5b4fc; font-size:1rem;">בדוק את הנתונים שלך</div>
+            `;
+            container.appendChild(hmCard);
         }
 
         function startLevel(id) {
@@ -521,10 +687,16 @@
 
         function startGameplay() {
             playSound('click');
+            isPracticeMode = false;
             questionCount = 0;
             score = 0;
             combo = 0;
             correctInLevel = 0;
+            
+            // תצוגה של מצב רגיל
+            document.getElementById('tracker-normal').style.display = 'block';
+            document.getElementById('tracker-practice').style.display = 'none';
+
             updateHUD();
             showScreen('screen-game');
             nextQuestion();
@@ -533,44 +705,91 @@
         function updateHUD() {
             document.getElementById('ui-score').innerText = score;
             document.getElementById('ui-combo').innerText = combo;
-            document.getElementById('ui-question-num').innerText = Math.min(questionCount + 1, TOTAL_QUESTIONS);
-            document.getElementById('ui-progress').style.width = `${(questionCount / TOTAL_QUESTIONS) * 100}%`;
+            
+            if (isPracticeMode) {
+                document.getElementById('ui-prac-num').innerText = practiceTotal + 1;
+                document.getElementById('ui-progress').style.width = `100%`; // מתמלא לגמרי בזמן אימון ללא הגבלה
+            } else {
+                document.getElementById('ui-question-num').innerText = Math.min(questionCount + 1, TOTAL_QUESTIONS);
+                document.getElementById('ui-progress').style.width = `${(questionCount / TOTAL_QUESTIONS) * 100}%`;
+            }
+            
             document.getElementById('ui-feedback').innerText = "";
         }
 
         function nextQuestion() {
-            if (questionCount >= TOTAL_QUESTIONS) {
+            if (!isPracticeMode && questionCount >= TOTAL_QUESTIONS) {
                 endLevel();
                 return;
             }
             isProcessing = false;
-            updateHUD();
+            
             let num1, num2;
-            if (currentLevelId === 'mixed') {
-                num1 = Math.floor(Math.random() * 11);
-                num2 = Math.floor(Math.random() * 11);
+            
+            if (isPracticeMode) {
+                let minErr = parseFloat(document.getElementById('prac-min').value);
+                let maxErr = parseFloat(document.getElementById('prac-max').value);
+                
+                // חיפוש כל התרגילים שמתאימים לתנאי האחוזים
+                let validCombos = [];
+                for (let i = 0; i <= 10; i++) {
+                    for (let j = 0; j <= 10; j++) {
+                        let key = `${i}x${j}`;
+                        if (heatmapData[key] && heatmapData[key].total > 0) {
+                            let errRate = (heatmapData[key].wrong / heatmapData[key].total) * 100;
+                            if (errRate >= minErr && errRate <= maxErr) {
+                                validCombos.push({n1: i, n2: j});
+                            }
+                        }
+                    }
+                }
+                
+                // אם אין תרגילים בטווח הנתון, מסיימים את האימון באופן יזום
+                if (validCombos.length === 0) {
+                    alert("כל הכבוד! אין יותר תרגילים שמתאימים לאחוזים האלו (השתפרת או שהטווח ריק). נסיים את האימון כעת.");
+                    endPractice();
+                    return;
+                }
+                
+                let pick = validCombos[Math.floor(Math.random() * validCombos.length)];
+                num1 = pick.n1;
+                num2 = pick.n2;
+
             } else {
-                const fixedNum = parseInt(currentLevelId);
-                const randomNum = Math.floor(Math.random() * 11);
-                if (Math.random() > 0.5) { num1 = fixedNum; num2 = randomNum; }
-                else { num1 = randomNum; num2 = fixedNum; }
+                // לוגיקה מקורית של המשחק
+                if (currentLevelId === 'mixed') {
+                    num1 = Math.floor(Math.random() * 11);
+                    num2 = Math.floor(Math.random() * 11);
+                } else {
+                    const fixedNum = parseInt(currentLevelId);
+                    const randomNum = Math.floor(Math.random() * 11);
+                    if (Math.random() > 0.5) { num1 = fixedNum; num2 = randomNum; }
+                    else { num1 = randomNum; num2 = fixedNum; }
+                }
             }
+            
+            currentN1 = num1;
+            currentN2 = num2;
             currentCorrectAnswer = num1 * num2;
+            
+            updateHUD();
             document.getElementById('ui-question').innerText = `${num1} × ${num2} = ?`;
+            
             let options = new Set();
             options.add(currentCorrectAnswer);
             while(options.size < 4) {
                 let wrong;
                 const distractorType = Math.floor(Math.random() * 4);
                 if (distractorType === 0) wrong = currentCorrectAnswer + (Math.random() > 0.5 ? 1 : -1);
-                else if (distractorType === 1 && currentLevelId !== 'mixed') wrong = currentCorrectAnswer + parseInt(currentLevelId);
-                else if (distractorType === 2 && currentLevelId !== 'mixed') wrong = currentCorrectAnswer - parseInt(currentLevelId);
+                else if (distractorType === 1 && currentLevelId !== 'mixed') wrong = currentCorrectAnswer + (isPracticeMode ? Math.max(currentN1, currentN2) : parseInt(currentLevelId));
+                else if (distractorType === 2 && currentLevelId !== 'mixed') wrong = currentCorrectAnswer - (isPracticeMode ? Math.max(currentN1, currentN2) : parseInt(currentLevelId));
                 else {
                     let variance = Math.max(5, Math.floor(currentCorrectAnswer * 0.3));
                     wrong = currentCorrectAnswer + Math.floor(Math.random() * variance * 2) - variance;
                 }
                 if (wrong >= 0 && wrong !== currentCorrectAnswer) options.add(wrong);
             }
+            
             const shuffledOptions = Array.from(options).sort(() => Math.random() - 0.5);
             const buttonsContainer = document.getElementById('ui-answers');
             buttonsContainer.innerHTML = '';
@@ -586,8 +805,20 @@
         function checkAnswer(selected, btnElement) {
             if (isProcessing) return;
             isProcessing = true;
+            
             const feedback = document.getElementById('ui-feedback');
+            const key = `${currentN1}x${currentN2}`;
+            
+            if (!heatmapData[key]) {
+                heatmapData[key] = { correct: 0, wrong: 0, total: 0 };
+            }
+
             if (selected === currentCorrectAnswer) {
+                // עדכון נתונים
+                heatmapData[key].correct++;
+                heatmapData[key].total++;
+                if(isPracticeMode) { practiceCorrect++; }
+                
                 playSound('correct');
                 btnElement.classList.add('correct');
                 correctInLevel++;
@@ -596,8 +827,20 @@
                 feedback.innerText = praiseWords[Math.floor(Math.random() * praiseWords.length)];
                 feedback.className = 'feedback-text good';
                 createParticles(btnElement);
-                setTimeout(() => { questionCount++; nextQuestion(); }, 1000);
+                
+                localStorage.setItem('spaceHeatmapData', JSON.stringify(heatmapData));
+                
+                if(isPracticeMode) practiceTotal++;
+                
+                setTimeout(() => { 
+                    if(!isPracticeMode) questionCount++; 
+                    nextQuestion(); 
+                }, 1000);
             } else {
+                // עדכון נתונים
+                heatmapData[key].wrong++;
+                heatmapData[key].total++;
+                
                 playSound('wrong');
                 btnElement.classList.add('wrong');
                 combo = 0;
@@ -609,29 +852,32 @@
                 });
                 feedback.innerText = `אוי! התשובה היא ${currentCorrectAnswer}. נסה לזכור!`;
                 feedback.className = 'feedback-text bad';
-                setTimeout(() => { questionCount++; nextQuestion(); }, 2500);
+                
+                localStorage.setItem('spaceHeatmapData', JSON.stringify(heatmapData));
+                
+                if(isPracticeMode) practiceTotal++;
+                
+                setTimeout(() => { 
+                    if(!isPracticeMode) questionCount++; 
+                    nextQuestion(); 
+                }, 2500);
             }
             updateHUD();
         }
 
+        // סיום רמה מקורית
         function endLevel() {
             playSound('win');
             
-            // Calculate Stars based on user's new rules:
-            // 0-1 mistakes (9-10 correct) = 3 stars
-            // 2-3 mistakes (7-8 correct) = 2 stars
-            // 4-5 mistakes (5-6 correct) = 1 star
-            // 6+ mistakes (0-4 correct) = 0 stars
             let starsEarned = 0;
             if (correctInLevel >= 9) starsEarned = 3;
             else if (correctInLevel >= 7) starsEarned = 2;
             else if (correctInLevel >= 5) starsEarned = 1;
 
-            // Save Progress - Always updates to the LAST performance
             userProgress[currentLevelId] = starsEarned;
             localStorage.setItem('spaceMultiplicationProgress', JSON.stringify(userProgress));
 
-            document.getElementById('res-correct').innerText = correctInLevel;
+            document.getElementById('res-correct').innerText = `${correctInLevel}/10`;
             document.getElementById('res-score').innerText = score;
             
             let titleText = "";
@@ -655,6 +901,152 @@
                     }, i * 400);
                 }
             }, 500);
+        }
+
+        // --- פונקציות מפת חום ואימון --- //
+
+        function showHeatmap() {
+            renderHeatmapTable();
+            showScreen('screen-heatmap');
+        }
+
+        function renderHeatmapTable() {
+            const table = document.getElementById('heatmap-table');
+            table.innerHTML = '';
+            
+            let trHead = document.createElement('tr');
+            trHead.innerHTML = `<th>×</th>`;
+            for (let i = 0; i <= 10; i++) {
+                trHead.innerHTML += `<th>${i}</th>`;
+            }
+            table.appendChild(trHead);
+
+            for (let r = 0; r <= 10; r++) {
+                let tr = document.createElement('tr');
+                tr.innerHTML = `<th>${r}</th>`;
+                for (let c = 0; c <= 10; c++) {
+                    let key = `${r}x${c}`;
+                    let cellData = heatmapData[key] || { correct: 0, wrong: 0, total: 0 };
+                    let errRate = cellData.total > 0 ? (cellData.wrong / cellData.total) * 100 : 0;
+                    
+                    let bgColor = 'rgba(255,255,255,0.05)';
+                    if (cellData.total > 0) {
+                        if (errRate < 25) bgColor = 'rgba(16, 185, 129, 0.4)'; // ירוק: 0% עד 24%
+                        else if (errRate < 50) bgColor = 'rgba(251, 191, 36, 0.4)'; // צהוב: 25% עד 49%
+                        else if (errRate < 75) bgColor = 'rgba(249, 115, 22, 0.4)'; // כתום: 50% עד 74%
+                        else bgColor = 'rgba(239, 68, 68, 0.4)'; // אדום: 75% עד 100%
+                    }
+
+                    let td = document.createElement('td');
+                    td.style.backgroundColor = bgColor;
+                    td.innerHTML = `
+                        <div class="hm-cell">
+                            <div class="hm-ans">${r * c}</div>
+                            <div class="hm-stats">
+                                <span>סה"כ ${cellData.total}</span>
+                                <span>❌ ${cellData.wrong}</span>
+                                <span>✅ ${cellData.correct}</span>
+                            </div>
+                        </div>
+                    `;
+                    tr.appendChild(td);
+                }
+                table.appendChild(tr);
+            }
+        }
+
+        function startPractice() {
+            let minErr = parseFloat(document.getElementById('prac-min').value);
+            let maxErr = parseFloat(document.getElementById('prac-max').value);
+            
+            if (isNaN(minErr) || isNaN(maxErr) || minErr < 0 || maxErr > 100 || minErr > maxErr) {
+                alert("אנא הזן אחוזים תקינים (בין 0 ל 100, מינימום קטן או שווה למקסימום).");
+                return;
+            }
+
+            // ווידוא מראש שיש תרגילים תואמים
+            let hasValid = false;
+            for (let i = 0; i <= 10; i++) {
+                for (let j = 0; j <= 10; j++) {
+                    let key = `${i}x${j}`;
+                    if (heatmapData[key] && heatmapData[key].total > 0) {
+                        let errRate = (heatmapData[key].wrong / heatmapData[key].total) * 100;
+                        if (errRate >= minErr && errRate <= maxErr) {
+                            hasValid = true;
+                            break;
+                        }
+                    }
+                }
+                if(hasValid) break;
+            }
+
+            if (!hasValid) {
+                alert("אין כרגע תרגילים שמתאימים לטווח האחוזים שהזנת. נסה טווח אחר או שחק קודם במשחק הרגיל.");
+                return;
+            }
+
+            isPracticeMode = true;
+            practiceCorrect = 0;
+            practiceTotal = 0;
+            score = 0;
+            combo = 0;
+            isProcessing = false;
+            
+            document.getElementById('tracker-normal').style.display = 'none';
+            document.getElementById('tracker-practice').style.display = 'flex';
+
+            playSound('click');
+            showScreen('screen-game');
+            nextQuestion();
+        }
+
+        function endPractice() {
+            if (isProcessing) return; // מונע יציאה באמצע בדיקת תשובה
+            
+            playSound('win');
+            let starsEarned = 0;
+            let accuracy = practiceTotal > 0 ? (practiceCorrect / practiceTotal) * 100 : 0;
+            
+            if (practiceTotal > 0) {
+                if (accuracy >= 90) starsEarned = 3;
+                else if (accuracy >= 70) starsEarned = 2;
+                else if (accuracy >= 50) starsEarned = 1;
+                else starsEarned = 0;
+            }
+
+            document.getElementById('res-correct').innerText = `${practiceCorrect}/${practiceTotal} (${Math.round(accuracy)}%)`;
+            document.getElementById('res-score').innerText = score;
+            
+            let titleText = "";
+            if (practiceTotal === 0) titleText = "לא ענית על שום תרגיל, נסה שוב! 👽";
+            else if (starsEarned === 3) titleText = "אימון מושלם! 🚀";
+            else if (starsEarned === 2) titleText = "אימון מצוין! 🌟";
+            else if (starsEarned === 1) titleText = "אימון טוב, המשך לתרגל! 💪";
+            else titleText = "כל הכבוד על האימון! נסה שוב כדי להשתפר! 👽";
+            
+            document.getElementById('result-title').innerText = titleText;
+
+            const starSpans = document.getElementById('result-stars').querySelectorAll('span');
+            starSpans.forEach(s => s.className = '');
+            
+            showScreen('screen-result');
+
+            setTimeout(() => {
+                for(let i=0; i<starsEarned; i++) {
+                    setTimeout(() => {
+                        playSound('click'); 
+                        starSpans[i].className = 'earned';
+                    }, i * 400);
+                }
+            }, 500);
+        }
+
+        function handlePlayAgain() {
+            if (isPracticeMode) {
+                startPractice();
+            } else {
+                startLevel(currentLevelId);
+            }
         }
 
         function generateBgStars() {
