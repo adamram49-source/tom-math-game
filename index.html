@@ -124,6 +124,11 @@
         }
         .btn.accent:active:not(:disabled) { box-shadow: 0 2px 0 #92400e; }
         
+        .btn.danger {
+            background: linear-gradient(135deg, #ef4444, #b91c1c);
+            box-shadow: 0 6px 0 #7f1d1d, 0 10px 20px rgba(0,0,0,0.4);
+        }
+        
         .btn.success {
             background: linear-gradient(135deg, #10b981, #059669);
             box-shadow: 0 6px 0 #064e3b, 0 10px 20px rgba(0,0,0,0.4);
@@ -183,7 +188,6 @@
             border-color: #3b82f6;
         }
 
-        /* סגנון כרטיסיית חנות חדשה במסך הראשי */
         .shop-card {
             grid-column: span 4;
             background: linear-gradient(45deg, rgba(219, 39, 119, 0.2), rgba(124, 58, 237, 0.2));
@@ -551,11 +555,18 @@
 
         .timer-inputs {
             display: flex; justify-content: center; align-items: center; gap: 10px; margin: 20px 0; font-size: 2rem;
+            direction: ltr; /* Ensure minutes on left, seconds on right */
         }
         .timer-inputs input {
             width: 80px; height: 60px; font-size: 2.5rem; text-align: center;
             border-radius: 10px; border: 2px solid var(--accent); background: white; color: black;
         }
+
+        select {
+            font-family: 'Rubik', sans-serif;
+            color: var(--dark);
+        }
+
     </style>
 </head>
 <body>
@@ -572,12 +583,21 @@
     <div id="timer-setup-modal" class="timer-modal-overlay">
         <div class="timer-modal">
             <h2>הגדרת זמן</h2>
+            
+            <div style="font-size: 1.2rem; margin-top: 15px;">בחר צלצול סיום:</div>
+            <select id="timer-sound-select" style="font-size: 1.2rem; padding: 5px; border-radius: 10px; margin: 10px 0 20px 0; width: 80%; text-align: center;" onchange="updateSelectedSound(this.value)">
+                <option value="chime">צליל רגיל</option>
+            </select>
+
             <div class="timer-inputs">
-                <input type="number" id="timer-min" min="0" max="60" value="0">
+                <input type="number" id="timer-min" min="0" max="60" value="0" title="דקות">
                 <span>:</span>
-                <input type="number" id="timer-sec" min="0" max="59" value="0">
+                <input type="number" id="timer-sec" min="0" max="59" value="0" title="שניות">
             </div>
-            <div style="font-size: 1rem; color: #a5b4fc; margin-bottom: 20px;">דקות : שניות</div>
+            <div style="font-size: 1rem; color: #a5b4fc; margin-bottom: 20px; display: flex; justify-content: center; gap: 40px;">
+                <span>דקות</span>
+                <span>שניות</span>
+            </div>
             <button class="btn success" onclick="startGlobalTimer()">התחל טיימר</button>
             <button class="btn" onclick="closeTimerModal()">ביטול</button>
         </div>
@@ -587,10 +607,27 @@
     <div id="timer-control-modal" class="timer-modal-overlay">
         <div class="timer-modal">
             <h2>בקרת טיימר</h2>
-            <div style="font-size: 3rem; font-weight: bold; color: #fbbf24; margin: 20px 0;" id="timer-control-display">00:00</div>
+            <div style="font-size: 3rem; font-weight: bold; color: #fbbf24; margin: 20px 0; direction: ltr;" id="timer-control-display">00:00</div>
             <button class="btn accent" id="btn-pause-resume" onclick="togglePauseTimer()">השהה</button>
             <button class="btn danger" onclick="stopGlobalTimer()">עצור וסיים</button>
             <button class="btn" onclick="closeTimerModal()">סגור תפריט</button>
+        </div>
+    </div>
+
+    <!-- Voice Recorder Modal -->
+    <div id="record-modal-overlay" class="timer-modal-overlay">
+        <div class="timer-modal">
+            <h2>הקלטת צלצול חדש 🎤</h2>
+            <p style="margin-bottom:20px; font-size: 1.1rem; color: #cbd5e1;">הקלט צלצול אישי משלך. עלות: 15 כוכבים. הצלצול ישמש אותך בטיימר.</p>
+            <div style="margin: 20px 0;">
+                <button class="btn" id="btn-start-rec" onclick="startRecording()">🔴 התחל הקלטה</button>
+                <button class="btn danger" id="btn-stop-rec" onclick="stopRecording()" style="display:none;">⏹️ עצור הקלטה</button>
+                <button class="btn success" id="btn-play-rec" onclick="playRecordingPreview()" style="display:none;">▶️ שמע הקלטה</button>
+            </div>
+            <div style="margin-top:20px;">
+                <button class="btn accent" id="btn-save-rec" onclick="saveRecording()" style="display:none;">✅ אשר וקנה (15 ⭐)</button>
+                <button class="btn" onclick="closeRecordModal()">ביטול</button>
+            </div>
         </div>
     </div>
 
@@ -654,8 +691,16 @@
             <div class="shop-item">
                 <div style="font-size: 4rem;">✨</div>
                 <h3>שדרוג כוכבים</h3>
-                <p>מכפיל את כמות הכוכבים שתקבל בסיום השלב או האימון הבא שלך! (משמש פעם אחת, כולל הבטחה למינימום 1 כוכב).</p>
+                <p>מכפיל משופר! כשתקנה, בסיום השלב הבא תקבל: 3 טעויות/כוכבים=10, 2=9, 1=5 ו-0 טעויות ייתנו 3 כוכבים במתנה!</p>
                 <button class="btn accent" id="btn-buy-multi" onclick="buyItem('multi')">קנה (5 כוכבים)</button>
+            </div>
+
+            <!-- Item 3: Voice Recorder (Appears after buying timer) -->
+            <div class="shop-item" id="shop-item-recorder" style="display:none;">
+                <div style="font-size: 4rem;">🎙️</div>
+                <h3>הקלטת צלצול</h3>
+                <p>הקלט את עצמך לצלצול הטיימר! אפשר לקנות אינסוף פעמים ולבחור איזה הקלטה להפעיל.</p>
+                <button class="btn success" onclick="openRecordModal()">קנה (15 כוכבים)</button>
             </div>
         </div>
         
@@ -707,7 +752,7 @@
             <div class="stat-box">ניקוד: <span id="res-score" style="color:#fbbf24; font-weight:bold;">500</span></div>
         </div>
         <div id="res-multi-msg" style="color:#f59e0b; font-size: 1.5rem; font-weight: bold; margin-top: 10px; display: none;">
-            ✨ הופעל שדרוג כוכבים - הרווחת כפליים! ✨
+            ✨ הופעל שדרוג כוכבים משופר - הרווחת כוכבים נוספים! ✨
         </div>
         <div style="margin-top: 30px;">
             <button class="btn accent" onclick="showScreen('screen-map')">המשך במסע 🗺️</button>
@@ -756,7 +801,9 @@
         let shopData = JSON.parse(localStorage.getItem('spaceShopData')) || {
             wallet: 0,
             hasTimer: false,
-            hasMultiplier: false
+            hasMultiplier: false,
+            recordings: [],
+            selectedSound: 'chime'
         };
 
         // --- Timer Variables ---
@@ -764,6 +811,12 @@
         let timerSecondsLeft = 0;
         let isTimerRunning = false;
         let isTimerPaused = false;
+
+        // --- Audio Recording Variables ---
+        let mediaRecorder;
+        let audioChunks = [];
+        let currentAudioBlob = null;
+        let currentAudioPreview = null;
 
         let audioCtx;
         function initAudio() {
@@ -799,7 +852,6 @@
                 gainNode.gain.setValueAtTime(0.2, audioCtx.currentTime); gainNode.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 0.8);
                 osc.start(); osc.stop(audioCtx.currentTime + 0.8);
             } else if (type === 'chime') {
-                // הצליל הנעים שהטיימר משמיע בסיום
                 const osc2 = audioCtx.createOscillator();
                 osc2.type = 'sine'; osc.type = 'triangle';
                 osc2.connect(gainNode);
@@ -909,6 +961,13 @@
                 btnMulti.innerText = 'קנה (5 כוכבים)';
                 btnMulti.disabled = false;
             }
+
+            const recorderCard = document.getElementById('shop-item-recorder');
+            if (shopData.hasTimer) {
+                recorderCard.style.display = 'flex';
+            } else {
+                recorderCard.style.display = 'none';
+            }
         }
 
         function buyItem(item) {
@@ -936,6 +995,99 @@
             }
         }
 
+        // --- Audio Recording Logic ---
+        async function startRecording() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                mediaRecorder = new MediaRecorder(stream);
+                audioChunks = [];
+
+                mediaRecorder.ondataavailable = event => {
+                    audioChunks.push(event.data);
+                };
+
+                mediaRecorder.onstop = () => {
+                    currentAudioBlob = new Blob(audioChunks, { type: 'audio/mp3' });
+                    const url = URL.createObjectURL(currentAudioBlob);
+                    currentAudioPreview = new Audio(url);
+                    
+                    document.getElementById('btn-play-rec').style.display = 'inline-block';
+                    document.getElementById('btn-save-rec').style.display = 'inline-block';
+                };
+
+                mediaRecorder.start();
+                document.getElementById('btn-start-rec').style.display = 'none';
+                document.getElementById('btn-stop-rec').style.display = 'inline-block';
+            } catch(e) {
+                alert("אין גישה למיקרופון. אנא ודא שיש לך מיקרופון פעיל ואישרת גישה בדפדפן.");
+            }
+        }
+
+        function stopRecording() {
+            if(mediaRecorder && mediaRecorder.state === "recording") {
+                mediaRecorder.stop();
+                mediaRecorder.stream.getTracks().forEach(t => t.stop());
+                document.getElementById('btn-stop-rec').style.display = 'none';
+                document.getElementById('btn-start-rec').style.display = 'inline-block';
+                document.getElementById('btn-start-rec').innerText = '🔴 הקלט שוב';
+            }
+        }
+
+        function playRecordingPreview() {
+            if(currentAudioPreview) {
+                currentAudioPreview.play();
+            }
+        }
+
+        function openRecordModal() {
+            if (shopData.wallet < 15) {
+                alert("אין לך מספיק כוכבים בארנק! (צריך 15)");
+                return;
+            }
+            playSound('click');
+            currentAudioBlob = null;
+            currentAudioPreview = null;
+            document.getElementById('btn-start-rec').style.display = 'inline-block';
+            document.getElementById('btn-start-rec').innerText = '🔴 התחל הקלטה';
+            document.getElementById('btn-stop-rec').style.display = 'none';
+            document.getElementById('btn-play-rec').style.display = 'none';
+            document.getElementById('btn-save-rec').style.display = 'none';
+            document.getElementById('record-modal-overlay').style.display = 'flex';
+        }
+
+        function closeRecordModal() {
+            playSound('click');
+            document.getElementById('record-modal-overlay').style.display = 'none';
+            if(mediaRecorder && mediaRecorder.state === "recording") {
+                mediaRecorder.stop();
+                mediaRecorder.stream.getTracks().forEach(t => t.stop());
+            }
+        }
+
+        function saveRecording() {
+            if (!currentAudioBlob) return;
+            if (shopData.wallet < 15) {
+                alert("שגיאה: אין מספיק כוכבים.");
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.readAsDataURL(currentAudioBlob);
+            reader.onloadend = () => {
+                const base64Audio = reader.result;
+                shopData.wallet -= 15;
+                if(!shopData.recordings) shopData.recordings = [];
+                shopData.recordings.push(base64Audio);
+                shopData.selectedSound = (shopData.recordings.length - 1).toString();
+                
+                saveShopData();
+                closeRecordModal();
+                playSound('win');
+                alert("ההקלטה נשמרה בהצלחה והוגדרה כצלצול הטיימר! תמיד תוכל לשנות זאת בחלון הטיימר.");
+                renderShop();
+            };
+        }
+
         // --- Timer Logic ---
         function checkGlobalTimerVisibility() {
             const widget = document.getElementById('global-timer-widget');
@@ -943,10 +1095,30 @@
             else widget.style.display = 'none';
         }
 
+        function populateTimerSounds() {
+            const select = document.getElementById('timer-sound-select');
+            select.innerHTML = '<option value="chime">צליל רגיל</option>';
+            if(shopData.recordings && shopData.recordings.length > 0) {
+                shopData.recordings.forEach((rec, idx) => {
+                    const opt = document.createElement('option');
+                    opt.value = idx.toString();
+                    opt.innerText = `הקלטה ${idx + 1}`;
+                    select.appendChild(opt);
+                });
+            }
+            select.value = shopData.selectedSound || 'chime';
+        }
+
+        function updateSelectedSound(val) {
+            shopData.selectedSound = val;
+            saveShopData();
+        }
+
         function handleTimerClick() {
             initAudio();
             playSound('click');
             if (!isTimerRunning && !isTimerPaused) {
+                populateTimerSounds();
                 document.getElementById('timer-setup-modal').style.display = 'flex';
             } else {
                 document.getElementById('timer-control-display').innerText = formatTime(timerSecondsLeft);
@@ -1002,7 +1174,6 @@
             
             if (timerSecondsLeft <= 0) {
                 if (timerInterval) clearInterval(timerInterval);
-                playSound('chime');
                 isTimerRunning = false;
                 isTimerPaused = false;
                 document.getElementById('timer-display-text').innerText = 'טיימר';
@@ -1010,6 +1181,24 @@
                 if (document.getElementById('timer-control-modal').style.display === 'flex') {
                     closeTimerModal();
                 }
+                playTimerAlarm();
+            }
+        }
+
+        function playTimerAlarm() {
+            if (shopData.selectedSound && shopData.selectedSound !== 'chime') {
+                const idx = parseInt(shopData.selectedSound);
+                if (!isNaN(idx) && shopData.recordings && shopData.recordings[idx]) {
+                    const audio = new Audio(shopData.recordings[idx]);
+                    audio.play().catch(e => {
+                        console.log("Audio playback blocked by browser, falling back to chime", e);
+                        playSound('chime');
+                    });
+                } else {
+                    playSound('chime');
+                }
+            } else {
+                playSound('chime');
             }
         }
 
@@ -1158,13 +1347,17 @@
             let usedMulti = false;
             
             if (shopData.hasMultiplier) {
-                finalStars = earnedStars > 0 ? earnedStars * 2 : 1;
-                shopData.hasMultiplier = false; // Consume the multiplier
+                if (earnedStars >= 3) finalStars = 10;
+                else if (earnedStars === 2) finalStars = 9;
+                else if (earnedStars === 1) finalStars = 5;
+                else if (earnedStars <= 0) finalStars = 3;
+                
+                shopData.hasMultiplier = false;
                 usedMulti = true;
             }
             
             shopData.wallet += finalStars;
-            saveShopData(); // This updates the UI and saves
+            saveShopData();
             
             return { finalStars, usedMulti };
         }
@@ -1178,7 +1371,6 @@
 
             const { finalStars, usedMulti } = calculateFinalStarsAndSave(baseStars);
 
-            // Update level best score (using base stars so map logic remains 0-3 correctly, but we can save up to 3)
             userProgress[currentLevelId] = Math.max(userProgress[currentLevelId] || 0, Math.min(baseStars, 3)); 
             localStorage.setItem('spaceMultiplicationProgress', JSON.stringify(userProgress));
 
@@ -1195,7 +1387,7 @@
             const multiMsg = document.getElementById('res-multi-msg');
             if (usedMulti) {
                 multiMsg.style.display = 'block';
-                multiMsg.innerText = `✨ הופעל שדרוג כוכבים - סה"כ קיבלת ${finalStars} כוכבים! ✨`;
+                multiMsg.innerText = `✨ הופעל שדרוג כוכבים משופר - סה"כ קיבלת ${finalStars} כוכבים! ✨`;
             } else {
                 multiMsg.style.display = 'none';
             }
@@ -1206,7 +1398,6 @@
             renderMap(); 
 
             setTimeout(() => {
-                // Show up to 3 stars visually on the modal, even if they got 6 to wallet
                 const displayCount = Math.min(finalStars, 3);
                 for(let i=0; i<displayCount; i++) {
                     setTimeout(() => { playSound('click'); starSpans[i].className = 'earned'; }, i * 400);
@@ -1294,7 +1485,7 @@
             const multiMsg = document.getElementById('res-multi-msg');
             if (usedMulti) {
                 multiMsg.style.display = 'block';
-                multiMsg.innerText = `✨ הופעל שדרוג כוכבים - סה"כ קיבלת ${finalStars} כוכבים! ✨`;
+                multiMsg.innerText = `✨ הופעל שדרוג כוכבים משופר - סה"כ קיבלת ${finalStars} כוכבים! ✨`;
             } else {
                 multiMsg.style.display = 'none';
             }
